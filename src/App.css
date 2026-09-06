@@ -663,3 +663,94 @@ body {
     flex-direction: column;
   }
 }
+/* =========================
+   DOCTOR LOGIN PAGE
+========================= */
+
+.doctor-login-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+}
+
+.doctor-login-container {
+  min-height: calc(100vh - 75px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+.doctor-login-card {
+  width: 430px;
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+}
+
+.doctor-login-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.doctor-icon {
+  font-size: 55px;
+  margin-bottom: 15px;
+}
+
+.doctor-login-header h1 {
+  font-size: 32px;
+  margin-bottom: 10px;
+}
+
+.doctor-login-header p {
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.doctor-login-submit {
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.doctor-login-submit:hover {
+  background: #1d4ed8;
+}
+
+@media (max-width: 500px) {
+  .doctor-login-card {
+    width: 100%;
+    padding: 25px;
+  }
+
+}
+/* VOICE INPUT */
+
+.mic-btn {
+  width: 50px;
+  border: none;
+  background: #16a34a;
+  color: white;
+  border-radius: 10px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.mic-btn.listening {
+  background: #dc2626;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(1.08);
+  }
+}
