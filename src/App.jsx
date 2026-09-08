@@ -9,6 +9,29 @@ function App() {
 
   const [page, setPage] = useState('home')
 
+  // =========================
+  // DOCTOR LOGIN STATES
+  // =========================
+
+  const [doctorId, setDoctorId] = useState('')
+  const [doctorPassword, setDoctorPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const [loggedInDoctor, setLoggedInDoctor] = useState(null)
+
+  // =========================
+  // PATIENT AUTHENTICATION STATES
+  // =========================
+
+  const [patientName, setPatientName] = useState('')
+  const [patientEmail, setPatientEmail] = useState('')
+  const [patientPhone, setPatientPhone] = useState('')
+  const [patientPassword, setPatientPassword] = useState('')
+  const [patientAuthError, setPatientAuthError] = useState('')
+  const [patientAuthMessage, setPatientAuthMessage] = useState('')
+  const [isPatientAuthLoading, setIsPatientAuthLoading] = useState(false)
+  const [loggedInPatient, setLoggedInPatient] = useState(null)
+
   const [patient, setPatient] = useState({
     name: '',
     age: '',
@@ -273,78 +296,71 @@ function App() {
   // HANDLE CHAT
   // =========================
 
-  const handleSend = () => {
+  const handleSend = async () => {
 
-    if (message.trim() === '' || caseComplete) {
-      return
-    }
-
-    const userText = message.trim()
-
-    const userMessage = {
-      sender: 'user',
-      text: userText
-    }
-
-    // First patient message
-    if (questions.length === 0) {
-
-      const result = detectSymptoms(userText)
-
-      setDetectedCondition(result.condition)
-      setQuestions(result.questions)
-      setAnswers([userText])
-      setCurrentQuestion(0)
-
-      setMessages([
-        ...messages,
-        userMessage,
-        {
-          sender: 'ai',
-          text: result.questions[0]
-        }
-      ])
-
-      setMessage('')
-      return
-    }
-
-    // Store answer
-    const newAnswers = [...answers, userText]
-    const nextQuestion = currentQuestion + 1
-
-    if (nextQuestion < questions.length) {
-
-      setAnswers(newAnswers)
-      setCurrentQuestion(nextQuestion)
-
-      setMessages([
-        ...messages,
-        userMessage,
-        {
-          sender: 'ai',
-          text: questions[nextQuestion]
-        }
-      ])
-
-    } else {
-
-      setAnswers(newAnswers)
-      setCaseComplete(true)
-
-      setMessages([
-        ...messages,
-        userMessage,
-        {
-          sender: 'ai',
-          text: 'Thank you. I have collected the important information for the patient case. You can now generate the clinical report.'
-        }
-      ])
-    }
-
-    setMessage('')
+  if (message.trim() === '' || caseComplete) {
+    return
   }
 
+  const userText = message.trim()
+
+  const userMessage = {
+    sender: 'user',
+    text: userText
+  }
+
+  // Show patient message immediately
+  setMessages((prevMessages) => [
+    ...prevMessages,
+    userMessage
+  ])
+
+  // Clear input box
+  setMessage('')
+
+  try {
+
+    const response = await fetch(
+      'http://localhost:5000/api/ai/chat',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify({
+          message: userText
+        })
+      }
+    )
+
+    const data = await response.json()
+
+    // Show AI reply
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        sender: 'ai',
+        text: data.reply
+      }
+    ])
+
+  } catch (error) {
+
+    console.error('AI Connection Error:', error)
+
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        sender: 'ai',
+        text: 'Sorry, I am unable to connect to the MediCase AI server right now.'
+      }
+    ])
+
+  }
+
+}
 
   // =========================
   // VOICE RECOGNITION
@@ -510,6 +526,366 @@ const startVoiceRecognition = () => {
 
 
   // =========================
+  // DOCTOR LOGIN FUNCTION
+  // =========================
+
+  const handleDoctorLogin = async () => {
+    setLoginError('')
+
+    if (!doctorId.trim() || !doctorPassword) {
+      setLoginError('Please enter your Doctor ID and password.')
+      return
+    }
+
+    try {
+      setIsLoggingIn(true)
+
+      const response = await fetch(
+        'http://localhost:5000/api/doctors/login',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            doctorId: doctorId.trim(),
+            password: doctorPassword
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setLoginError(data.message || 'Login failed. Please try again.')
+        return
+      }
+
+      setLoggedInDoctor(data.doctor)
+      setDoctorPassword('')
+      setPage('dashboard')
+
+    } catch (error) {
+      console.error('Login error:', error)
+      setLoginError('Unable to connect to the server. Please make sure the backend is running.')
+
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }
+
+
+
+  // =========================
+  // PATIENT REGISTRATION
+  // =========================
+
+  const handlePatientRegister = async () => {
+    setPatientAuthError('')
+    setPatientAuthMessage('')
+
+    if (!patientName.trim() || !patientEmail.trim() || !patientPhone.trim() || !patientPassword) {
+      setPatientAuthError('Please fill in all fields.')
+      return
+    }
+
+    try {
+      setIsPatientAuthLoading(true)
+
+      const response = await fetch(
+        'http://localhost:5000/api/patients/register',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: patientName.trim(),
+            email: patientEmail.trim(),
+            phone: patientPhone.trim(),
+            password: patientPassword
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setPatientAuthError(data.message || 'Patient registration failed.')
+        return
+      }
+
+      setPatientAuthMessage('Registration successful! Please log in.')
+      setPatientPassword('')
+      setPage('patientLogin')
+
+    } catch (error) {
+      console.error('Patient registration error:', error)
+      setPatientAuthError('Unable to connect to the server. Please make sure the backend is running.')
+    } finally {
+      setIsPatientAuthLoading(false)
+    }
+  }
+
+
+  // =========================
+  // PATIENT LOGIN
+  // =========================
+
+  const handlePatientLogin = async () => {
+    setPatientAuthError('')
+
+    if (!patientEmail.trim() || !patientPassword) {
+      setPatientAuthError('Please enter your email and password.')
+      return
+    }
+
+    try {
+      setIsPatientAuthLoading(true)
+
+      const response = await fetch(
+        'http://localhost:5000/api/patients/login',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: patientEmail.trim(),
+            password: patientPassword
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setPatientAuthError(data.message || 'Patient login failed.')
+        return
+      }
+
+      setLoggedInPatient(data.patient)
+      setPatientAuthMessage('')
+      setPatientAuthError('')
+      setPatientPassword('')
+      setPage('registration')
+
+    } catch (error) {
+      console.error('Patient login error:', error)
+      setPatientAuthError('Unable to connect to the server. Please make sure the backend is running.')
+    } finally {
+      setIsPatientAuthLoading(false)
+    }
+  }
+
+
+
+  // =========================
+  // PATIENT REGISTRATION ACCOUNT PAGE
+  // =========================
+
+  if (page === 'patientRegister') {
+    return (
+      <div className="doctor-login-page">
+        <nav className="navbar">
+          <div className="logo">
+            🏥 MediCase <span>AI</span>
+          </div>
+
+          <button
+            className="back-btn"
+            onClick={() => {
+              setPatientAuthError('')
+              setPatientAuthMessage('')
+              setPage('home')
+            }}
+          >
+            ← Back to Home
+          </button>
+        </nav>
+
+        <div className="doctor-login-container">
+          <div className="doctor-login-card">
+            <div className="doctor-login-header">
+              <div className="doctor-icon">👤</div>
+              <h1>Patient Registration</h1>
+              <p>Create your MediCase AI patient account.</p>
+            </div>
+
+            <div className="input-group">
+              <label>Full Name</label>
+              <input
+                type="text"
+                placeholder="Enter your full name"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Email</label>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={patientEmail}
+                onChange={(e) => setPatientEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Phone Number</label>
+              <input
+                type="tel"
+                placeholder="Enter your phone number"
+                value={patientPhone}
+                onChange={(e) => setPatientPhone(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="Create a password"
+                value={patientPassword}
+                onChange={(e) => setPatientPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handlePatientRegister()
+                }}
+              />
+            </div>
+
+            {patientAuthError && (
+              <p className="login-error">{patientAuthError}</p>
+            )}
+
+            <button
+              className="doctor-login-submit"
+              onClick={handlePatientRegister}
+              disabled={isPatientAuthLoading}
+            >
+              {isPatientAuthLoading ? 'Creating account...' : 'Create Account →'}
+            </button>
+
+            <p style={{ textAlign: 'center', marginTop: '16px' }}>
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setPatientAuthError('')
+                  setPatientAuthMessage('')
+                  setPatientPassword('')
+                  setPage('patientLogin')
+                }}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Patient Login
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+
+  // =========================
+  // PATIENT LOGIN PAGE
+  // =========================
+
+  if (page === 'patientLogin') {
+    return (
+      <div className="doctor-login-page">
+        <nav className="navbar">
+          <div className="logo">
+            🏥 MediCase <span>AI</span>
+          </div>
+
+          <button
+            className="back-btn"
+            onClick={() => {
+              setPatientAuthError('')
+              setPatientAuthMessage('')
+              setPatientPassword('')
+              setPage('home')
+            }}
+          >
+            ← Back to Home
+          </button>
+        </nav>
+
+        <div className="doctor-login-container">
+          <div className="doctor-login-card">
+            <div className="doctor-login-header">
+              <div className="doctor-icon">🧑‍🦱</div>
+              <h1>Patient Login</h1>
+              <p>Login to access your MediCase AI patient account.</p>
+            </div>
+
+            {patientAuthMessage && (
+              <p style={{ textAlign: 'center', marginBottom: '12px' }}>
+                {patientAuthMessage}
+              </p>
+            )}
+
+            <div className="input-group">
+              <label>Email</label>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={patientEmail}
+                onChange={(e) => setPatientEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={patientPassword}
+                onChange={(e) => setPatientPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handlePatientLogin()
+                }}
+              />
+            </div>
+
+            {patientAuthError && (
+              <p className="login-error">{patientAuthError}</p>
+            )}
+
+            <button
+              className="doctor-login-submit"
+              onClick={handlePatientLogin}
+              disabled={isPatientAuthLoading}
+            >
+              {isPatientAuthLoading ? 'Logging in...' : 'Patient Login →'}
+            </button>
+
+            <p style={{ textAlign: 'center', marginTop: '16px' }}>
+              New to MediCase AI?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setPatientAuthError('')
+                  setPatientAuthMessage('')
+                  setPatientPassword('')
+                  setPage('patientRegister')
+                }}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Create an Account
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+
+  // =========================
   // DOCTOR LOGIN PAGE
   // =========================
 
@@ -527,7 +903,11 @@ const startVoiceRecognition = () => {
 
           <button
             className="back-btn"
-            onClick={() => setPage('home')}
+            onClick={() => {
+              setLoginError('')
+              setDoctorPassword('')
+              setPage('home')
+            }}
           >
             ← Back to Home
           </button>
@@ -548,7 +928,7 @@ const startVoiceRecognition = () => {
               <h1>Doctor Login</h1>
 
               <p>
-                Login to access the MediCase AI Doctor Dashboard.
+                Login securely to access the MediCase AI Doctor Dashboard.
               </p>
 
             </div>
@@ -561,6 +941,13 @@ const startVoiceRecognition = () => {
               <input
                 type="text"
                 placeholder="Enter Doctor ID"
+                value={doctorId}
+                onChange={(e) => setDoctorId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleDoctorLogin()
+                  }
+                }}
               />
 
             </div>
@@ -573,16 +960,31 @@ const startVoiceRecognition = () => {
               <input
                 type="password"
                 placeholder="Enter password"
+                value={doctorPassword}
+                onChange={(e) => setDoctorPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleDoctorLogin()
+                  }
+                }}
               />
 
             </div>
 
 
+            {loginError && (
+              <p className="login-error">
+                {loginError}
+              </p>
+            )}
+
+
             <button
               className="doctor-login-submit"
-              onClick={() => setPage('dashboard')}
+              onClick={handleDoctorLogin}
+              disabled={isLoggingIn}
             >
-              Login →
+              {isLoggingIn ? 'Logging in...' : 'Login →'}
             </button>
 
           </div>
@@ -619,7 +1021,13 @@ const startVoiceRecognition = () => {
 
           <button
             className="back-btn"
-            onClick={() => setPage('home')}
+            onClick={() => {
+              setLoggedInDoctor(null)
+              setDoctorId('')
+              setDoctorPassword('')
+              setLoginError('')
+              setPage('home')
+            }}
           >
             ← Logout
           </button>
@@ -633,7 +1041,7 @@ const startVoiceRecognition = () => {
 
             <div>
 
-              <h1>Welcome, Doctor 👨‍⚕️</h1>
+              <h1>Welcome, {loggedInDoctor?.name || 'Doctor'} 👨‍⚕️</h1>
 
               <p>
                 Manage and review patient cases using MediCase AI.
@@ -1325,12 +1733,30 @@ const startVoiceRecognition = () => {
         </div>
 
 
-        <button
-          className="login-btn"
-          onClick={() => setPage('doctorLogin')}
-        >
-          Doctor Login
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+
+          <button
+            className="login-btn"
+            onClick={() => setPage('doctorLogin')}
+          >
+            Doctor Login
+          </button>
+
+          <button
+            className="login-btn"
+            onClick={() => setPage('patientLogin')}
+          >
+            Patient Login
+          </button>
+
+          <button
+            className="login-btn"
+            onClick={() => setPage('patientRegister')}
+          >
+            Register
+          </button>
+
+        </div>
 
       </nav>
 
@@ -1368,7 +1794,7 @@ const startVoiceRecognition = () => {
 
             <button
               className="primary-btn"
-              onClick={startNewCase}
+              onClick={() => loggedInPatient ? startNewCase() : setPage('patientLogin')}
             >
               ➕ Start New Case
             </button>
