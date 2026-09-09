@@ -32,6 +32,10 @@ function App() {
   const [isPatientAuthLoading, setIsPatientAuthLoading] = useState(false)
   const [loggedInPatient, setLoggedInPatient] = useState(null)
 
+  // =========================
+  // PATIENT DETAILS
+  // =========================
+
   const [patient, setPatient] = useState({
     name: '',
     age: '',
@@ -40,13 +44,17 @@ function App() {
     phone: ''
   })
 
+  // =========================
+  // CHAT STATES
+  // =========================
+
   const [message, setMessage] = useState('')
   const [isListening, setIsListening] = useState(false)
 
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
-      text: "Hello! I'm MediCase AI. Please tell me what health problem or symptoms you are currently experiencing."
+      text: "Hello! I'm MediCase AI. What are you not feeling well about today? Please describe your main health problem or symptoms."
     }
   ])
 
@@ -54,9 +62,10 @@ function App() {
   const [answers, setAnswers] = useState([])
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [caseComplete, setCaseComplete] = useState(false)
-  const [detectedCondition, setDetectedCondition] = useState('General Medical Case')
-  const [cases, setCases] = useState([])
+  const [detectedCondition, setDetectedCondition] =
+    useState('General Medical Case')
 
+  const [cases, setCases] = useState([])
 
   // =========================
   // SMART SYMPTOM DETECTION
@@ -64,380 +73,382 @@ function App() {
 
   const detectSymptoms = (symptomText) => {
 
-  const text = symptomText.toLowerCase()
+    const text = symptomText.toLowerCase()
+    const language = patient.language
 
-  const language = patient.language
+    // =========================
+    // ENGLISH QUESTIONS
+    // =========================
 
+    const englishQuestions = {
+      fever: [
+        'How long have you had the fever?',
+        'Do you know your approximate temperature?',
+        'Do you have chills or body pain?',
+        'Do you have cough, cold, or weakness?',
+        'Have you taken any medication or visited a doctor?'
+      ],
 
-  // =========================
-  // ENGLISH
-  // =========================
+      headache: [
+        'How long have you been experiencing the headache?',
+        'Where exactly is the headache located?',
+        'How severe is the headache: mild, moderate, or severe?',
+        'Do you have dizziness, nausea, or blurred vision?',
+        'Have you taken any medication for the headache?'
+      ],
 
-  const englishQuestions = {
-    fever: [
-      'How long have you had the fever?',
-      'Do you know your approximate temperature?',
-      'Do you have chills or body pain?',
-      'Do you have cough, cold, or weakness?',
-      'Have you taken any medication or visited a doctor?'
-    ],
+      general: [
+        'How long have you been experiencing these symptoms?',
+        'Can you describe the symptoms in more detail?',
+        'How severe are the symptoms: mild, moderate, or severe?',
+        'Do you have any other associated symptoms?',
+        'Have you taken any medication or visited a doctor?'
+      ]
+    }
 
-    headache: [
-      'How long have you been experiencing the headache?',
-      'Where exactly is the headache located?',
-      'How severe is the headache: mild, moderate, or severe?',
-      'Do you have dizziness, nausea, or blurred vision?',
-      'Have you taken any medication for the headache?'
-    ],
+    // =========================
+    // TELUGU QUESTIONS
+    // =========================
 
-    general: [
-      'How long have you been experiencing these symptoms?',
-      'Can you describe the symptoms in more detail?',
-      'How severe are the symptoms: mild, moderate, or severe?',
-      'Do you have any other associated symptoms?',
-      'Have you taken any medication or visited a doctor?'
-    ]
-  }
+    const teluguQuestions = {
+      fever: [
+        'మీకు జ్వరం ఎంతకాలంగా ఉంది?',
+        'మీ శరీర ఉష్ణోగ్రత ఎంత ఉందో తెలుసా?',
+        'మీకు చలి లేదా ఒళ్ళు నొప్పులు ఉన్నాయా?',
+        'మీకు దగ్గు, జలుబు లేదా బలహీనత ఉందా?',
+        'మీరు ఏదైనా మందులు తీసుకున్నారా లేదా డాక్టర్‌ను సంప్రదించారా?'
+      ],
 
+      headache: [
+        'మీకు తలనొప్పి ఎంతకాలంగా ఉంది?',
+        'తలలో ఏ ప్రాంతంలో నొప్పి ఉంది?',
+        'తలనొప్పి తక్కువగా, మోస్తరుగా లేదా తీవ్రంగా ఉందా?',
+        'మీకు తల తిరగడం, వికారం లేదా చూపు సమస్యలు ఉన్నాయా?',
+        'మీరు తలనొప్పికి ఏదైనా మందులు తీసుకున్నారా?'
+      ],
 
-  // =========================
-  // TELUGU
-  // =========================
+      general: [
+        'మీకు ఈ లక్షణాలు ఎంతకాలంగా ఉన్నాయి?',
+        'మీ లక్షణాలను కొంచెం వివరంగా చెప్పగలరా?',
+        'ఈ లక్షణాలు తక్కువగా, మోస్తరుగా లేదా తీవ్రంగా ఉన్నాయా?',
+        'మీకు ఇతర లక్షణాలు ఏమైనా ఉన్నాయా?',
+        'మీరు ఏదైనా మందులు తీసుకున్నారా లేదా డాక్టర్‌ను సంప్రదించారా?'
+      ]
+    }
 
-  const teluguQuestions = {
-    fever: [
-      'మీకు జ్వరం ఎంతకాలంగా ఉంది?',
-      'మీ శరీర ఉష్ణోగ్రత ఎంత ఉందో తెలుసా?',
-      'మీకు చలి లేదా ఒళ్ళు నొప్పులు ఉన్నాయా?',
-      'మీకు దగ్గు, జలుబు లేదా బలహీనత ఉందా?',
-      'మీరు ఏదైనా మందులు తీసుకున్నారా లేదా డాక్టర్‌ను సంప్రదించారా?'
-    ],
+    // =========================
+    // HINDI QUESTIONS
+    // =========================
 
-    headache: [
-      'మీకు తలనొప్పి ఎంతకాలంగా ఉంది?',
-      'తలలో ఏ ప్రాంతంలో నొప్పి ఉంది?',
-      'తలనొప్పి తక్కువగా, మోస్తరుగా లేదా తీవ్రంగా ఉందా?',
-      'మీకు తల తిరగడం, వికారం లేదా చూపు సమస్యలు ఉన్నాయా?',
-      'మీరు తలనొప్పికి ఏదైనా మందులు తీసుకున్నారా?'
-    ],
+    const hindiQuestions = {
+      fever: [
+        'आपको बुखार कितने समय से है?',
+        'क्या आपको अपना अनुमानित तापमान पता है?',
+        'क्या आपको ठंड या शरीर में दर्द हो रहा है?',
+        'क्या आपको खांसी, जुकाम या कमजोरी है?',
+        'क्या आपने कोई दवा ली है या डॉक्टर से मिले हैं?'
+      ],
 
-    general: [
-      'మీకు ఈ లక్షణాలు ఎంతకాలంగా ఉన్నాయి?',
-      'మీ లక్షణాలను కొంచెం వివరంగా చెప్పగలరా?',
-      'ఈ లక్షణాలు తక్కువగా, మోస్తరుగా లేదా తీవ్రంగా ఉన్నాయా?',
-      'మీకు ఇతర లక్షణాలు ఏమైనా ఉన్నాయా?',
-      'మీరు ఏదైనా మందులు తీసుకున్నారా లేదా డాక్టర్‌ను సంప్రదించారా?'
-    ]
-  }
+      headache: [
+        'आपको सिरदर्द कितने समय से है?',
+        'सिर के किस हिस्से में दर्द है?',
+        'सिरदर्द हल्का, मध्यम या गंभीर है?',
+        'क्या आपको चक्कर, मतली या धुंधला दिखाई दे रहा है?',
+        'क्या आपने सिरदर्द के लिए कोई दवा ली है?'
+      ],
 
+      general: [
+        'आपको ये लक्षण कितने समय से हैं?',
+        'क्या आप अपने लक्षणों को विस्तार से बता सकते हैं?',
+        'लक्षण हल्के, मध्यम या गंभीर हैं?',
+        'क्या आपको कोई अन्य लक्षण हैं?',
+        'क्या आपने कोई दवा ली है या डॉक्टर से मिले हैं?'
+      ]
+    }
 
-  // =========================
-  // HINDI
-  // =========================
+    // =========================
+    // KANNADA QUESTIONS
+    // =========================
 
-  const hindiQuestions = {
-    fever: [
-      'आपको बुखार कितने समय से है?',
-      'क्या आपको अपना अनुमानित तापमान पता है?',
-      'क्या आपको ठंड या शरीर में दर्द हो रहा है?',
-      'क्या आपको खांसी, जुकाम या कमजोरी है?',
-      'क्या आपने कोई दवा ली है या डॉक्टर से मिले हैं?'
-    ],
+    const kannadaQuestions = {
+      fever: [
+        'ನಿಮಗೆ ಜ್ವರ ಎಷ್ಟು ಸಮಯದಿಂದ ಇದೆ?',
+        'ನಿಮ್ಮ ಅಂದಾಜು ದೇಹದ ಉಷ್ಣಾಂಶ ಎಷ್ಟು ಎಂದು ತಿಳಿದಿದೆಯೇ?',
+        'ನಿಮಗೆ ಚಳಿ ಅಥವಾ ಮೈ ನೋವು ಇದೆಯೇ?',
+        'ನಿಮಗೆ ಕೆಮ್ಮು, ಶೀತ ಅಥವಾ ದೌರ್ಬಲ್ಯ ಇದೆಯೇ?',
+        'ನೀವು ಯಾವುದಾದರೂ ಔಷಧಿ ತೆಗೆದುಕೊಂಡಿದ್ದೀರಾ ಅಥವಾ ವೈದ್ಯರನ್ನು ಭೇಟಿಯಾಗಿದ್ದೀರಾ?'
+      ],
 
-    headache: [
-      'आपको सिरदर्द कितने समय से है?',
-      'सिर के किस हिस्से में दर्द है?',
-      'सिरदर्द हल्का, मध्यम या गंभीर है?',
-      'क्या आपको चक्कर, मतली या धुंधला दिखाई दे रहा है?',
-      'क्या आपने सिरदर्द के लिए कोई दवा ली है?'
-    ],
+      headache: [
+        'ನಿಮಗೆ ತಲೆನೋವು ಎಷ್ಟು ಸಮಯದಿಂದ ಇದೆ?',
+        'ತಲೆಯ ಯಾವ ಭಾಗದಲ್ಲಿ ನೋವು ಇದೆ?',
+        'ತಲೆನೋವು ಸೌಮ್ಯ, ಮಧ್ಯಮ ಅಥವಾ ತೀವ್ರವಾಗಿದೆಯೇ?',
+        'ನಿಮಗೆ ತಲೆಸುತ್ತು, ವಾಕರಿಕೆ ಅಥವಾ ದೃಷ್ಟಿ ಸಮಸ್ಯೆ ಇದೆಯೇ?',
+        'ತಲೆನೋವಿಗಾಗಿ ಯಾವುದಾದರೂ ಔಷಧಿ ತೆಗೆದುಕೊಂಡಿದ್ದೀರಾ?'
+      ],
 
-    general: [
-      'आपको ये लक्षण कितने समय से हैं?',
-      'क्या आप अपने लक्षणों को विस्तार से बता सकते हैं?',
-      'लक्षण हल्के, मध्यम या गंभीर हैं?',
-      'क्या आपको कोई अन्य लक्षण हैं?',
-      'क्या आपने कोई दवा ली है या डॉक्टर से मिले हैं?'
-    ]
-  }
+      general: [
+        'ನಿಮಗೆ ಈ ಲಕ್ಷಣಗಳು ಎಷ್ಟು ಸಮಯದಿಂದ ಇವೆ?',
+        'ನಿಮ್ಮ ಲಕ್ಷಣಗಳನ್ನು ಸ್ವಲ್ಪ ವಿವರವಾಗಿ ಹೇಳಬಹುದೇ?',
+        'ಲಕ್ಷಣಗಳು ಸೌಮ್ಯ, ಮಧ್ಯಮ ಅಥವಾ ತೀವ್ರವಾಗಿವೆಯೇ?',
+        'ನಿಮಗೆ ಬೇರೆ ಯಾವುದೇ ಲಕ್ಷಣಗಳಿವೆಯೇ?',
+        'ನೀವು ಯಾವುದಾದರೂ ಔಷಧಿ ತೆಗೆದುಕೊಂಡಿದ್ದೀರಾ ಅಥವಾ ವೈದ್ಯರನ್ನು ಭೇಟಿಯಾಗಿದ್ದೀರಾ?'
+      ]
+    }
 
+    // =========================
+    // TAMIL QUESTIONS
+    // =========================
 
-  // =========================
-  // KANNADA
-  // =========================
+    const tamilQuestions = {
+      fever: [
+        'உங்களுக்கு காய்ச்சல் எவ்வளவு நாட்களாக உள்ளது?',
+        'உங்கள் உடல் வெப்பநிலை எவ்வளவு என்று தெரியுமா?',
+        'உங்களுக்கு குளிர் அல்லது உடல் வலி இருக்கிறதா?',
+        'உங்களுக்கு இருமல், சளி அல்லது பலவீனம் இருக்கிறதா?',
+        'நீங்கள் ஏதேனும் மருந்து எடுத்துள்ளீர்களா அல்லது மருத்துவரை சந்தித்துள்ளீர்களா?'
+      ],
 
-  const kannadaQuestions = {
-    fever: [
-      'ನಿಮಗೆ ಜ್ವರ ಎಷ್ಟು ಸಮಯದಿಂದ ಇದೆ?',
-      'ನಿಮ್ಮ ಅಂದಾಜು ದೇಹದ ಉಷ್ಣಾಂಶ ಎಷ್ಟು ಎಂದು ತಿಳಿದಿದೆಯೇ?',
-      'ನಿಮಗೆ ಚಳಿ ಅಥವಾ ಮೈ ನೋವು ಇದೆಯೇ?',
-      'ನಿಮಗೆ ಕೆಮ್ಮು, ಶೀತ ಅಥವಾ ದೌರ್ಬಲ್ಯ ಇದೆಯೇ?',
-      'ನೀವು ಯಾವುದಾದರೂ ಔಷಧಿ ತೆಗೆದುಕೊಂಡಿದ್ದೀರಾ ಅಥವಾ ವೈದ್ಯರನ್ನು ಭೇಟಿಯಾಗಿದ್ದೀರಾ?'
-    ],
+      headache: [
+        'உங்களுக்கு தலைவலி எவ்வளவு நாட்களாக உள்ளது?',
+        'தலையின் எந்த பகுதியில் வலி உள்ளது?',
+        'தலைவலி லேசானதா, மிதமானதா அல்லது தீவிரமானதா?',
+        'உங்களுக்கு தலைசுற்றல் அல்லது குமட்டல் இருக்கிறதா?',
+        'தலைவலிக்காக ஏதேனும் மருந்து எடுத்துள்ளீர்களா?'
+      ],
 
-    headache: [
-      'ನಿಮಗೆ ತಲೆನೋವು ಎಷ್ಟು ಸಮಯದಿಂದ ಇದೆ?',
-      'ತಲೆಯ ಯಾವ ಭಾಗದಲ್ಲಿ ನೋವು ಇದೆ?',
-      'ತಲೆನೋವು ಸೌಮ್ಯ, ಮಧ್ಯಮ ಅಥವಾ ತೀವ್ರವಾಗಿದೆಯೇ?',
-      'ನಿಮಗೆ ತಲೆಸುತ್ತು, ವಾಕರಿಕೆ ಅಥವಾ ದೃಷ್ಟಿ ಸಮಸ್ಯೆ ಇದೆಯೇ?',
-      'ತಲೆನೋವಿಗಾಗಿ ಯಾವುದಾದರೂ ಔಷಧಿ ತೆಗೆದುಕೊಂಡಿದ್ದೀರಾ?'
-    ],
+      general: [
+        'இந்த அறிகுறிகள் உங்களுக்கு எவ்வளவு நாட்களாக உள்ளன?',
+        'உங்கள் அறிகுறிகளை மேலும் விவரமாக கூற முடியுமா?',
+        'அறிகுறிகள் லேசானதா, மிதமானதா அல்லது தீவிரமானதா?',
+        'உங்களுக்கு வேறு ஏதேனும் அறிகுறிகள் உள்ளனவா?',
+        'நீங்கள் ஏதேனும் மருந்து எடுத்துள்ளீர்களா அல்லது மருத்துவரை சந்தித்துள்ளீர்களா?'
+      ]
+    }
 
-    general: [
-      'ನಿಮಗೆ ಈ ಲಕ್ಷಣಗಳು ಎಷ್ಟು ಸಮಯದಿಂದ ಇವೆ?',
-      'ನಿಮ್ಮ ಲಕ್ಷಣಗಳನ್ನು ಸ್ವಲ್ಪ ವಿವರವಾಗಿ ಹೇಳಬಹುದೇ?',
-      'ಲಕ್ಷಣಗಳು ಸೌಮ್ಯ, ಮಧ್ಯಮ ಅಥವಾ ತೀವ್ರವಾಗಿವೆಯೇ?',
-      'ನಿಮಗೆ ಬೇರೆ ಯಾವುದೇ ಲಕ್ಷಣಗಳಿವೆಯೇ?',
-      'ನೀವು ಯಾವುದಾದರೂ ಔಷಧಿ ತೆಗೆದುಕೊಂಡಿದ್ದೀರಾ ಅಥವಾ ವೈದ್ಯರನ್ನು ಭೇಟಿಯಾಗಿದ್ದೀರಾ?'
-    ]
-  }
+    // =========================
+    // SELECT LANGUAGE
+    // =========================
 
+    let selectedQuestions = englishQuestions
 
-  // =========================
-  // TAMIL
-  // =========================
+    if (language === 'Telugu') {
+      selectedQuestions = teluguQuestions
+    } else if (language === 'Hindi') {
+      selectedQuestions = hindiQuestions
+    } else if (language === 'Kannada') {
+      selectedQuestions = kannadaQuestions
+    } else if (language === 'Tamil') {
+      selectedQuestions = tamilQuestions
+    }
 
-  const tamilQuestions = {
-    fever: [
-      'உங்களுக்கு காய்ச்சல் எவ்வளவு நாட்களாக உள்ளது?',
-      'உங்கள் உடல் வெப்பநிலை எவ்வளவு என்று தெரியுமா?',
-      'உங்களுக்கு குளிர் அல்லது உடல் வலி இருக்கிறதா?',
-      'உங்களுக்கு இருமல், சளி அல்லது பலவீனம் இருக்கிறதா?',
-      'நீங்கள் ஏதேனும் மருந்து எடுத்துள்ளீர்களா அல்லது மருத்துவரை சந்தித்துள்ளீர்களா?'
-    ],
+    // =========================
+    // DETECT FEVER
+    // =========================
 
-    headache: [
-      'உங்களுக்கு தலைவலி எவ்வளவு நாட்களாக உள்ளது?',
-      'தலையின் எந்த பகுதியில் வலி உள்ளது?',
-      'தலைவலி லேசானதா, மிதமானதா அல்லது தீவிரமானதா?',
-      'உங்களுக்கு தலைசுற்றல் அல்லது குமட்டல் இருக்கிறதா?',
-      'தலைவலிக்காக ஏதேனும் மருந்து எடுத்துள்ளீர்களா?'
-    ],
+    if (
+      text.includes('fever') ||
+      text.includes('జ్వరం') ||
+      text.includes('बुखार') ||
+      text.includes('ಜ್ವರ') ||
+      text.includes('காய்ச்சல்')
+    ) {
+      return {
+        condition: 'Fever',
+        questions: selectedQuestions.fever
+      }
+    }
 
-    general: [
-      'இந்த அறிகுறிகள் உங்களுக்கு எவ்வளவு நாட்களாக உள்ளன?',
-      'உங்கள் அறிகுறிகளை மேலும் விவரமாக கூற முடியுமா?',
-      'அறிகுறிகள் லேசானதா, மிதமானதா அல்லது தீவிரமானதா?',
-      'உங்களுக்கு வேறு ஏதேனும் அறிகுறிகள் உள்ளனவா?',
-      'நீங்கள் ஏதேனும் மருந்து எடுத்துள்ளீர்களா அல்லது மருத்துவரை சந்தித்துள்ளீர்களா?'
-    ]
-  }
+    // =========================
+    // DETECT HEADACHE
+    // =========================
 
+    if (
+      text.includes('headache') ||
+      text.includes('head pain') ||
+      text.includes('migraine') ||
+      text.includes('తలనొప్పి') ||
+      text.includes('सिरदर्द') ||
+      text.includes('ತಲೆನೋವು') ||
+      text.includes('தலைவலி')
+    ) {
+      return {
+        condition: 'Headache / Migraine',
+        questions: selectedQuestions.headache
+      }
+    }
 
-  // =========================
-  // SELECT LANGUAGE
-  // =========================
+    // =========================
+    // GENERAL CASE
+    // =========================
 
-  let selectedQuestions = englishQuestions
-
-  if (language === 'Telugu') {
-    selectedQuestions = teluguQuestions
-  }
-
-  else if (language === 'Hindi') {
-    selectedQuestions = hindiQuestions
-  }
-
-  else if (language === 'Kannada') {
-    selectedQuestions = kannadaQuestions
-  }
-
-  else if (language === 'Tamil') {
-    selectedQuestions = tamilQuestions
-  }
-
-
-  // =========================
-  // DETECT SYMPTOM
-  // =========================
-
-  if (
-    text.includes('fever') ||
-    text.includes('జ్వరం') ||
-    text.includes('बुखार') ||
-    text.includes('ಜ್ವರ') ||
-    text.includes('காய்ச்சல்')
-  ) {
     return {
-      condition: 'Fever',
-      questions: selectedQuestions.fever
+      condition: 'General Medical Case',
+      questions: selectedQuestions.general
     }
   }
-
-
-  if (
-    text.includes('headache') ||
-    text.includes('head pain') ||
-    text.includes('migraine') ||
-    text.includes('తలనొప్పి') ||
-    text.includes('सिरदर्द') ||
-    text.includes('ತಲೆನೋವು') ||
-    text.includes('தலைவலி')
-  ) {
-    return {
-      condition: 'Headache / Migraine',
-      questions: selectedQuestions.headache
-    }
-  }
-
-
-  // =========================
-  // GENERAL CASE
-  // =========================
-
-  return {
-    condition: 'General Medical Case',
-    questions: selectedQuestions.general
-  }
-}
-
 
   // =========================
   // HANDLE CHAT
   // =========================
 
-  const handleSend = async () => {
+  const handleSend = () => {
 
-  if (message.trim() === '' || caseComplete) {
-    return
-  }
+    if (message.trim() === '' || caseComplete) {
+      return
+    }
 
-  const userText = message.trim()
+    const userText = message.trim()
 
-  const userMessage = {
-    sender: 'user',
-    text: userText
-  }
-
-  // Show patient message immediately
-  setMessages((prevMessages) => [
-    ...prevMessages,
-    userMessage
-  ])
-
-  // Clear input box
-  setMessage('')
-
-  try {
-
-    const response = await fetch(
-      'http://localhost:5000/api/ai/chat',
-      {
-        method: 'POST',
-
-        headers: {
-          'Content-Type': 'application/json'
-        },
-
-        body: JSON.stringify({
-          message: userText
-        })
-      }
-    )
-
-    const data = await response.json()
-
-    // Show AI reply
+    // Show patient message
     setMessages((prevMessages) => [
       ...prevMessages,
       {
-        sender: 'ai',
-        text: data.reply
+        sender: 'user',
+        text: userText
       }
     ])
 
-  } catch (error) {
+    // Clear input
+    setMessage('')
 
-    console.error('AI Connection Error:', error)
+    // =========================
+    // FIRST ANSWER
+    // =========================
 
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      {
-        sender: 'ai',
-        text: 'Sorry, I am unable to connect to the MediCase AI server right now.'
-      }
-    ])
+    if (questions.length === 0) {
 
+      const detected = detectSymptoms(userText)
+
+      setDetectedCondition(detected.condition)
+      setQuestions(detected.questions)
+      setAnswers([userText])
+      setCurrentQuestion(0)
+
+      // Ask first follow-up question
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          sender: 'ai',
+          text: detected.questions[0]
+        }
+      ])
+
+      return
+    }
+
+    // =========================
+    // SAVE ANSWER
+    // =========================
+
+    const updatedAnswers = [
+      ...answers,
+      userText
+    ]
+
+    setAnswers(updatedAnswers)
+
+    const nextQuestionIndex =
+      currentQuestion + 1
+
+    // =========================
+    // ASK NEXT QUESTION
+    // =========================
+
+    if (nextQuestionIndex < questions.length) {
+
+      setCurrentQuestion(nextQuestionIndex)
+
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          sender: 'ai',
+          text: questions[nextQuestionIndex]
+        }
+      ])
+
+    } else {
+
+      // =========================
+      // CASE COMPLETED
+      // =========================
+
+      setCaseComplete(true)
+
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          sender: 'ai',
+          text: 'Thank you. I have collected all the required information. Your patient case is now ready for report generation.'
+        }
+      ])
+    }
   }
-
-}
 
   // =========================
   // VOICE RECOGNITION
   // =========================
-const startVoiceRecognition = () => {
 
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition
+  const startVoiceRecognition = () => {
 
-  if (!SpeechRecognition) {
-    alert(
-      'Voice recognition is not supported in this browser. Please use Google Chrome.'
-    )
-    return
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      alert(
+        'Voice recognition is not supported in this browser. Please use Google Chrome.'
+      )
+      return
+    }
+
+    const languageCodes = {
+      English: 'en-IN',
+      Kannada: 'kn-IN',
+      Hindi: 'hi-IN',
+      Telugu: 'te-IN',
+      Tamil: 'ta-IN'
+    }
+
+    const recognitionInstance =
+      new SpeechRecognition()
+
+    recognitionInstance.continuous = false
+    recognitionInstance.interimResults = false
+
+    recognitionInstance.lang =
+      languageCodes[patient.language] || 'en-IN'
+
+    recognitionInstance.onstart = () => {
+      setIsListening(true)
+    }
+
+    recognitionInstance.onresult = (event) => {
+
+      const voiceText =
+        event.results[0][0].transcript
+
+      setMessage(voiceText)
+    }
+
+    recognitionInstance.onerror = (event) => {
+
+      console.error(
+        'Voice recognition error:',
+        event.error
+      )
+
+      setIsListening(false)
+    }
+
+    recognitionInstance.onend = () => {
+      setIsListening(false)
+    }
+
+    recognitionInstance.start()
   }
 
-  // Language mapping
-  const languageCodes = {
-    English: 'en-IN',
-    Kannada: 'kn-IN',
-    Hindi: 'hi-IN',
-    Telugu: 'te-IN',
-    Tamil: 'ta-IN'
-  }
-
-  const recognitionInstance = new SpeechRecognition()
-
-  recognitionInstance.continuous = false
-  recognitionInstance.interimResults = false
-
-  recognitionInstance.lang =
-    languageCodes[patient.language] || 'en-IN'
-
-
-  recognitionInstance.onstart = () => {
-    console.log('Voice recognition started')
-    setIsListening(true)
-  }
-
-
-  recognitionInstance.onresult = (event) => {
-
-    const voiceText =
-      event.results[0][0].transcript
-
-    console.log('You said:', voiceText)
-
-    setMessage(voiceText)
-  }
-
-
-  recognitionInstance.onerror = (event) => {
-
-    console.error(
-      'Voice recognition error:',
-      event.error
-    )
-
-    alert('Microphone error: ' + event.error)
-
-    setIsListening(false)
-  }
-
-
-  recognitionInstance.onend = () => {
-    console.log('Voice recognition ended')
-    setIsListening(false)
-  }
-
-
-  recognitionInstance.start()
-}
-
-
-
-  // ======================
+  // =========================
   // VALIDATE PATIENT DETAILS
   // =========================
 
@@ -449,13 +460,14 @@ const startVoiceRecognition = () => {
       patient.gender === '' ||
       patient.phone.trim() === ''
     ) {
-      alert('Please fill in all required patient details.')
+      alert(
+        'Please fill in all required patient details.'
+      )
       return
     }
 
     setPage('case')
   }
-
 
   // =========================
   // SAVE COMPLETED CASE
@@ -476,7 +488,8 @@ const startVoiceRecognition = () => {
 
       condition: detectedCondition,
 
-      complaint: answers[0] || 'Not provided',
+      complaint:
+        answers[0] || 'Not provided',
 
       questions: [...questions],
 
@@ -490,7 +503,6 @@ const startVoiceRecognition = () => {
       ...previousCases
     ])
   }
-
 
   // =========================
   // START NEW CASE
@@ -511,7 +523,7 @@ const startVoiceRecognition = () => {
     setMessages([
       {
         sender: 'ai',
-        text: "Hello! I'm MediCase AI. Please tell me what health problem or symptoms you are currently experiencing."
+        text: "Hello! I'm MediCase AI. What are you not feeling well about today? Please describe your main health problem or symptoms."
       }
     ])
 
@@ -519,34 +531,44 @@ const startVoiceRecognition = () => {
     setAnswers([])
     setCurrentQuestion(0)
     setCaseComplete(false)
-    setDetectedCondition('General Medical Case')
+    setDetectedCondition(
+      'General Medical Case'
+    )
 
     setPage('registration')
   }
 
-
   // =========================
-  // DOCTOR LOGIN FUNCTION
+  // DOCTOR LOGIN
   // =========================
 
   const handleDoctorLogin = async () => {
+
     setLoginError('')
 
-    if (!doctorId.trim() || !doctorPassword) {
-      setLoginError('Please enter your Doctor ID and password.')
+    if (
+      !doctorId.trim() ||
+      !doctorPassword
+    ) {
+      setLoginError(
+        'Please enter your Doctor ID and password.'
+      )
       return
     }
 
     try {
+
       setIsLoggingIn(true)
 
       const response = await fetch(
         'http://localhost:5000/api/doctors/login',
         {
           method: 'POST',
+
           headers: {
             'Content-Type': 'application/json'
           },
+
           body: JSON.stringify({
             doctorId: doctorId.trim(),
             password: doctorPassword
@@ -554,10 +576,16 @@ const startVoiceRecognition = () => {
         }
       )
 
-      const data = await response.json()
+      const data =
+        await response.json()
 
       if (!response.ok) {
-        setLoginError(data.message || 'Login failed. Please try again.')
+
+        setLoginError(
+          data.message ||
+          'Login failed. Please try again.'
+        )
+
         return
       }
 
@@ -566,39 +594,57 @@ const startVoiceRecognition = () => {
       setPage('dashboard')
 
     } catch (error) {
-      console.error('Login error:', error)
-      setLoginError('Unable to connect to the server. Please make sure the backend is running.')
+
+      console.error(
+        'Login error:',
+        error
+      )
+
+      setLoginError(
+        'Unable to connect to the server. Please make sure the backend is running.'
+      )
 
     } finally {
+
       setIsLoggingIn(false)
+
     }
   }
-
-
 
   // =========================
   // PATIENT REGISTRATION
   // =========================
 
   const handlePatientRegister = async () => {
+
     setPatientAuthError('')
     setPatientAuthMessage('')
 
-    if (!patientName.trim() || !patientEmail.trim() || !patientPhone.trim() || !patientPassword) {
-      setPatientAuthError('Please fill in all fields.')
+    if (
+      !patientName.trim() ||
+      !patientEmail.trim() ||
+      !patientPhone.trim() ||
+      !patientPassword
+    ) {
+      setPatientAuthError(
+        'Please fill in all fields.'
+      )
       return
     }
 
     try {
+
       setIsPatientAuthLoading(true)
 
       const response = await fetch(
         'http://localhost:5000/api/patients/register',
         {
           method: 'POST',
+
           headers: {
             'Content-Type': 'application/json'
           },
+
           body: JSON.stringify({
             name: patientName.trim(),
             email: patientEmail.trim(),
@@ -608,48 +654,75 @@ const startVoiceRecognition = () => {
         }
       )
 
-      const data = await response.json()
+      const data =
+        await response.json()
 
       if (!response.ok) {
-        setPatientAuthError(data.message || 'Patient registration failed.')
+
+        setPatientAuthError(
+          data.message ||
+          'Patient registration failed.'
+        )
+
         return
       }
 
-      setPatientAuthMessage('Registration successful! Please log in.')
+      setPatientAuthMessage(
+        'Registration successful! Please log in.'
+      )
+
       setPatientPassword('')
       setPage('patientLogin')
 
     } catch (error) {
-      console.error('Patient registration error:', error)
-      setPatientAuthError('Unable to connect to the server. Please make sure the backend is running.')
+
+      console.error(
+        'Patient registration error:',
+        error
+      )
+
+      setPatientAuthError(
+        'Unable to connect to the server. Please make sure the backend is running.'
+      )
+
     } finally {
+
       setIsPatientAuthLoading(false)
+
     }
   }
-
 
   // =========================
   // PATIENT LOGIN
   // =========================
 
   const handlePatientLogin = async () => {
+
     setPatientAuthError('')
 
-    if (!patientEmail.trim() || !patientPassword) {
-      setPatientAuthError('Please enter your email and password.')
+    if (
+      !patientEmail.trim() ||
+      !patientPassword
+    ) {
+      setPatientAuthError(
+        'Please enter your email and password.'
+      )
       return
     }
 
     try {
+
       setIsPatientAuthLoading(true)
 
       const response = await fetch(
         'http://localhost:5000/api/patients/login',
         {
           method: 'POST',
+
           headers: {
             'Content-Type': 'application/json'
           },
+
           body: JSON.stringify({
             email: patientEmail.trim(),
             password: patientPassword
@@ -657,29 +730,48 @@ const startVoiceRecognition = () => {
         }
       )
 
-      const data = await response.json()
+      const data =
+        await response.json()
 
       if (!response.ok) {
-        setPatientAuthError(data.message || 'Patient login failed.')
+
+        setPatientAuthError(
+          data.message ||
+          'Patient login failed.'
+        )
+
         return
       }
 
       setLoggedInPatient(data.patient)
+
       setPatientAuthMessage('')
       setPatientAuthError('')
       setPatientPassword('')
+
       setPage('registration')
 
     } catch (error) {
-      console.error('Patient login error:', error)
-      setPatientAuthError('Unable to connect to the server. Please make sure the backend is running.')
+
+      console.error(
+        'Patient login error:',
+        error
+      )
+
+      setPatientAuthError(
+        'Unable to connect to the server. Please make sure the backend is running.'
+      )
+
     } finally {
+
       setIsPatientAuthLoading(false)
+
     }
   }
 
-
-
+  // ==========================================
+  // PART 2 CONTINUES BELOW THIS LINE
+  // ==========================================
   // =========================
   // PATIENT REGISTRATION ACCOUNT PAGE
   // =========================
@@ -687,7 +779,9 @@ const startVoiceRecognition = () => {
   if (page === 'patientRegister') {
     return (
       <div className="doctor-login-page">
+
         <nav className="navbar">
+
           <div className="logo">
             🏥 MediCase <span>AI</span>
           </div>
@@ -702,73 +796,124 @@ const startVoiceRecognition = () => {
           >
             ← Back to Home
           </button>
+
         </nav>
 
+
         <div className="doctor-login-container">
+
           <div className="doctor-login-card">
+
             <div className="doctor-login-header">
-              <div className="doctor-icon">👤</div>
+
+              <div className="doctor-icon">
+                👤
+              </div>
+
               <h1>Patient Registration</h1>
-              <p>Create your MediCase AI patient account.</p>
+
+              <p>
+                Create your MediCase AI patient account.
+              </p>
+
             </div>
 
+
             <div className="input-group">
+
               <label>Full Name</label>
+
               <input
                 type="text"
                 placeholder="Enter your full name"
                 value={patientName}
-                onChange={(e) => setPatientName(e.target.value)}
+                onChange={(e) =>
+                  setPatientName(e.target.value)
+                }
               />
+
             </div>
 
+
             <div className="input-group">
+
               <label>Email</label>
+
               <input
                 type="email"
                 placeholder="Enter your email"
                 value={patientEmail}
-                onChange={(e) => setPatientEmail(e.target.value)}
+                onChange={(e) =>
+                  setPatientEmail(e.target.value)
+                }
               />
+
             </div>
 
+
             <div className="input-group">
+
               <label>Phone Number</label>
+
               <input
                 type="tel"
                 placeholder="Enter your phone number"
                 value={patientPhone}
-                onChange={(e) => setPatientPhone(e.target.value)}
+                onChange={(e) =>
+                  setPatientPhone(e.target.value)
+                }
               />
+
             </div>
 
+
             <div className="input-group">
+
               <label>Password</label>
+
               <input
                 type="password"
                 placeholder="Create a password"
                 value={patientPassword}
-                onChange={(e) => setPatientPassword(e.target.value)}
+                onChange={(e) =>
+                  setPatientPassword(e.target.value)
+                }
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handlePatientRegister()
+                  if (e.key === 'Enter') {
+                    handlePatientRegister()
+                  }
                 }}
               />
+
             </div>
 
+
             {patientAuthError && (
-              <p className="login-error">{patientAuthError}</p>
+              <p className="login-error">
+                {patientAuthError}
+              </p>
             )}
+
 
             <button
               className="doctor-login-submit"
               onClick={handlePatientRegister}
               disabled={isPatientAuthLoading}
             >
-              {isPatientAuthLoading ? 'Creating account...' : 'Create Account →'}
+              {isPatientAuthLoading
+                ? 'Creating account...'
+                : 'Create Account →'}
             </button>
 
-            <p style={{ textAlign: 'center', marginTop: '16px' }}>
+
+            <p
+              style={{
+                textAlign: 'center',
+                marginTop: '16px'
+              }}
+            >
               Already have an account?{' '}
+
               <button
                 type="button"
                 onClick={() => {
@@ -777,13 +922,22 @@ const startVoiceRecognition = () => {
                   setPatientPassword('')
                   setPage('patientLogin')
                 }}
-                style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
               >
                 Patient Login
               </button>
+
             </p>
+
           </div>
+
         </div>
+
       </div>
     )
   }
@@ -794,9 +948,13 @@ const startVoiceRecognition = () => {
   // =========================
 
   if (page === 'patientLogin') {
+
     return (
+
       <div className="doctor-login-page">
+
         <nav className="navbar">
+
           <div className="logo">
             🏥 MediCase <span>AI</span>
           </div>
@@ -812,59 +970,104 @@ const startVoiceRecognition = () => {
           >
             ← Back to Home
           </button>
+
         </nav>
 
+
         <div className="doctor-login-container">
+
           <div className="doctor-login-card">
+
             <div className="doctor-login-header">
-              <div className="doctor-icon">🧑‍🦱</div>
+
+              <div className="doctor-icon">
+                🧑‍🦱
+              </div>
+
               <h1>Patient Login</h1>
-              <p>Login to access your MediCase AI patient account.</p>
+
+              <p>
+                Login to access your MediCase AI patient account.
+              </p>
+
             </div>
 
+
             {patientAuthMessage && (
-              <p style={{ textAlign: 'center', marginBottom: '12px' }}>
+              <p
+                style={{
+                  textAlign: 'center',
+                  marginBottom: '12px'
+                }}
+              >
                 {patientAuthMessage}
               </p>
             )}
 
+
             <div className="input-group">
+
               <label>Email</label>
+
               <input
                 type="email"
                 placeholder="Enter your email"
                 value={patientEmail}
-                onChange={(e) => setPatientEmail(e.target.value)}
+                onChange={(e) =>
+                  setPatientEmail(e.target.value)
+                }
               />
+
             </div>
 
+
             <div className="input-group">
+
               <label>Password</label>
+
               <input
                 type="password"
                 placeholder="Enter your password"
                 value={patientPassword}
-                onChange={(e) => setPatientPassword(e.target.value)}
+                onChange={(e) =>
+                  setPatientPassword(e.target.value)
+                }
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handlePatientLogin()
+                  if (e.key === 'Enter') {
+                    handlePatientLogin()
+                  }
                 }}
               />
+
             </div>
 
+
             {patientAuthError && (
-              <p className="login-error">{patientAuthError}</p>
+              <p className="login-error">
+                {patientAuthError}
+              </p>
             )}
+
 
             <button
               className="doctor-login-submit"
               onClick={handlePatientLogin}
               disabled={isPatientAuthLoading}
             >
-              {isPatientAuthLoading ? 'Logging in...' : 'Patient Login →'}
+              {isPatientAuthLoading
+                ? 'Logging in...'
+                : 'Patient Login →'}
             </button>
 
-            <p style={{ textAlign: 'center', marginTop: '16px' }}>
+
+            <p
+              style={{
+                textAlign: 'center',
+                marginTop: '16px'
+              }}
+            >
               New to MediCase AI?{' '}
+
               <button
                 type="button"
                 onClick={() => {
@@ -873,13 +1076,22 @@ const startVoiceRecognition = () => {
                   setPatientPassword('')
                   setPage('patientRegister')
                 }}
-                style={{ border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                style={{
+                  border: 'none',
+                  background: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
               >
                 Create an Account
               </button>
+
             </p>
+
           </div>
+
         </div>
+
       </div>
     )
   }
@@ -942,7 +1154,9 @@ const startVoiceRecognition = () => {
                 type="text"
                 placeholder="Enter Doctor ID"
                 value={doctorId}
-                onChange={(e) => setDoctorId(e.target.value)}
+                onChange={(e) =>
+                  setDoctorId(e.target.value)
+                }
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleDoctorLogin()
@@ -961,7 +1175,9 @@ const startVoiceRecognition = () => {
                 type="password"
                 placeholder="Enter password"
                 value={doctorPassword}
-                onChange={(e) => setDoctorPassword(e.target.value)}
+                onChange={(e) =>
+                  setDoctorPassword(e.target.value)
+                }
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleDoctorLogin()
@@ -984,7 +1200,9 @@ const startVoiceRecognition = () => {
               onClick={handleDoctorLogin}
               disabled={isLoggingIn}
             >
-              {isLoggingIn ? 'Logging in...' : 'Login →'}
+              {isLoggingIn
+                ? 'Logging in...'
+                : 'Login →'}
             </button>
 
           </div>
@@ -1008,6 +1226,7 @@ const startVoiceRecognition = () => {
       cases.filter(
         (item) => item.status === 'Completed'
       ).length
+
 
     return (
 
@@ -1041,7 +1260,9 @@ const startVoiceRecognition = () => {
 
             <div>
 
-              <h1>Welcome, {loggedInDoctor?.name || 'Doctor'} 👨‍⚕️</h1>
+              <h1>
+                Welcome, {loggedInDoctor?.name || 'Doctor'} 👨‍⚕️
+              </h1>
 
               <p>
                 Manage and review patient cases using MediCase AI.
@@ -1064,7 +1285,9 @@ const startVoiceRecognition = () => {
 
             <div className="stat-card">
 
-              <div className="stat-icon">📋</div>
+              <div className="stat-icon">
+                📋
+              </div>
 
               <h2>{totalCases}</h2>
 
@@ -1075,7 +1298,9 @@ const startVoiceRecognition = () => {
 
             <div className="stat-card">
 
-              <div className="stat-icon">⏳</div>
+              <div className="stat-icon">
+                ⏳
+              </div>
 
               <h2>0</h2>
 
@@ -1086,7 +1311,9 @@ const startVoiceRecognition = () => {
 
             <div className="stat-card">
 
-              <div className="stat-icon">✅</div>
+              <div className="stat-icon">
+                ✅
+              </div>
 
               <h2>{completedCases}</h2>
 
@@ -1099,7 +1326,9 @@ const startVoiceRecognition = () => {
 
           <div className="recent-cases">
 
-            <h2>📋 Recent Patient Cases</h2>
+            <h2>
+              📋 Recent Patient Cases
+            </h2>
 
 
             {cases.length === 0 ? (
@@ -1110,7 +1339,9 @@ const startVoiceRecognition = () => {
                   🏥
                 </div>
 
-                <h3>No saved patient cases yet</h3>
+                <h3>
+                  No saved patient cases yet
+                </h3>
 
                 <p>
                   Complete a patient case to see it appear here.
@@ -1413,8 +1644,8 @@ const startVoiceRecognition = () => {
             </h1>
 
             <p>
-              MediCase AI analyzes symptoms and asks
-              relevant follow-up questions.
+              MediCase AI asks step-by-step follow-up
+              questions and collects patient information.
             </p>
 
           </div>
@@ -1466,7 +1697,9 @@ const startVoiceRecognition = () => {
                   placeholder={
                     isListening
                       ? '🎙️ Listening... Speak now'
-                      : "Describe the patient's symptoms..."
+                      : questions.length === 0
+                        ? "What are you not feeling well about today?"
+                        : 'Type your answer...'
                   }
                   value={message}
                   onChange={(e) =>
@@ -1508,8 +1741,13 @@ const startVoiceRecognition = () => {
               <button
                 className="generate-report-btn"
                 onClick={() => {
+
+                  // Save the completed case
                   saveCase()
+
+                  // Open the clinical report
                   setPage('report')
+
                 }}
               >
                 📋 Generate Clinical Report
@@ -1565,7 +1803,9 @@ const startVoiceRecognition = () => {
 
               <div>
 
-                <h1>📋 Clinical Case Report</h1>
+                <h1>
+                  📋 Clinical Case Report
+                </h1>
 
                 <p>
                   AI-Assisted Patient Case Summary
@@ -1583,7 +1823,9 @@ const startVoiceRecognition = () => {
 
             <div className="report-section">
 
-              <h2>👤 Patient Information</h2>
+              <h2>
+                👤 Patient Information
+              </h2>
 
               <p>
                 <strong>Name:</strong>
@@ -1620,7 +1862,9 @@ const startVoiceRecognition = () => {
 
             <div className="report-section">
 
-              <h2>🩺 Detected Condition</h2>
+              <h2>
+                🩺 Primary Health Concern
+              </h2>
 
               <p>
                 {detectedCondition}
@@ -1631,7 +1875,9 @@ const startVoiceRecognition = () => {
 
             <div className="report-section">
 
-              <h2>📝 Main Complaint</h2>
+              <h2>
+                📝 Main Complaint
+              </h2>
 
               <p>
                 {answers[0] || 'Not provided'}
@@ -1662,28 +1908,32 @@ const startVoiceRecognition = () => {
 
             <div className="ai-summary">
 
-              <h2>🤖 AI Case Summary</h2>
+              <h2>
+                🤖 AI Case Summary
+              </h2>
 
               <p>
-                MediCase AI identified the primary symptom category as
-                <strong>
-                  {' '}
-                  {detectedCondition}
-                </strong>
+                The patient reported a primary health concern related to
                 {' '}
-                and collected relevant follow-up information.
+                <strong>
+                  {detectedCondition}
+                </strong>.
+                MediCase AI collected the patient's reported symptoms
+                and follow-up information through a structured
+                question-and-answer process.
               </p>
 
               <p>
-                This structured report is designed to assist healthcare
-                professionals during patient consultation and documentation.
+                This report is intended to help healthcare professionals
+                review and document patient-reported information.
               </p>
 
               <p>
                 <strong>Important:</strong>
                 {' '}
-                This system does not provide a medical diagnosis
-                and should not replace professional medical advice.
+                This system does not provide a medical diagnosis and
+                should not replace professional medical advice,
+                diagnosis, or treatment.
               </p>
 
             </div>
@@ -1733,7 +1983,13 @@ const startVoiceRecognition = () => {
         </div>
 
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'center'
+          }}
+        >
 
           <button
             className="login-btn"
@@ -1742,12 +1998,14 @@ const startVoiceRecognition = () => {
             Doctor Login
           </button>
 
+
           <button
             className="login-btn"
             onClick={() => setPage('patientLogin')}
           >
             Patient Login
           </button>
+
 
           <button
             className="login-btn"
@@ -1776,9 +2034,11 @@ const startVoiceRecognition = () => {
           <h1>
             Intelligent Patient
             <br />
+
             <span>
               Case-Taking System
             </span>
+
           </h1>
 
 
@@ -1794,13 +2054,26 @@ const startVoiceRecognition = () => {
 
             <button
               className="primary-btn"
-              onClick={() => loggedInPatient ? startNewCase() : setPage('patientLogin')}
+              onClick={() =>
+                loggedInPatient
+                  ? startNewCase()
+                  : setPage('patientLogin')
+              }
             >
               ➕ Start New Case
             </button>
 
 
-            <button className="secondary-btn">
+            <button
+              className="secondary-btn"
+              onClick={() =>
+                document
+                  .getElementById('features')
+                  ?.scrollIntoView({
+                    behavior: 'smooth'
+                  })
+              }
+            >
               ▶ See How It Works
             </button>
 
@@ -1825,18 +2098,18 @@ const startVoiceRecognition = () => {
             <div className="ai-message">
               Hello! I'm MediCase AI.
               <br />
-              Let's begin the patient case-taking process.
+              What are you not feeling well about today?
             </div>
 
 
             <div className="patient-message">
-              I have been experiencing fever and headache.
+              I have fever and headache.
             </div>
 
 
             <div className="ai-message">
-              I understand. How long have you been experiencing
-              these symptoms?
+              I understand. Let me ask you a few questions
+              step by step to collect the required information.
             </div>
 
           </div>
@@ -1864,10 +2137,13 @@ const startVoiceRecognition = () => {
               🤖
             </div>
 
-            <h3>AI Guided Questions</h3>
+            <h3>
+              AI Guided Questions
+            </h3>
 
             <p>
-              Symptom-based follow-up questions for better case taking.
+              Step-by-step symptom-based follow-up questions
+              for structured patient case taking.
             </p>
 
           </div>
@@ -1879,10 +2155,13 @@ const startVoiceRecognition = () => {
               🎙️
             </div>
 
-            <h3>Voice Case Taking</h3>
+            <h3>
+              Voice Case Taking
+            </h3>
 
             <p>
-              Patients can describe symptoms naturally using voice.
+              Patients can describe symptoms and answer
+              questions naturally using voice.
             </p>
 
           </div>
@@ -1894,10 +2173,13 @@ const startVoiceRecognition = () => {
               🌐
             </div>
 
-            <h3>Multilingual Support</h3>
+            <h3>
+              Multilingual Support
+            </h3>
 
             <p>
-              Support for Indian languages to reduce communication barriers.
+              Support for multiple Indian languages to reduce
+              communication barriers.
             </p>
 
           </div>
@@ -1909,10 +2191,13 @@ const startVoiceRecognition = () => {
               📄
             </div>
 
-            <h3>Smart Reports</h3>
+            <h3>
+              Smart Reports
+            </h3>
 
             <p>
-              Automatically generate structured patient case documentation.
+              Automatically generate structured patient
+              case documentation from collected answers.
             </p>
 
           </div>
